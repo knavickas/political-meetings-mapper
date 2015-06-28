@@ -1,0 +1,30 @@
+import csv, string, os
+
+MDFILE = "metadataNorthernStar.csv"
+OCRFOLDER = "Northern Star 1841 OCR text forthcoming meetings\TEXT FILES"
+FINALCSV = "output.csv"
+
+HEADERS = ["NewspaperText", "Date of meeting", "Place", "Newspaper", "Date"]
+
+def get_place(meeting_txt):
+	return string.capwords(meeting_txt.split(".")[0].lower())
+with open(FINALCSV, "wb") as final:
+	finalcsv = csv.writer(final)
+	finalcsv.writerow(HEADERS)
+	with open(MDFILE, "rb") as mdfile:
+		mdcsv = csv.DictReader(mdfile)
+		for row in mdcsv:
+			# get OCR
+			ocrfn = row['OCR file name']
+			if ocrfn and os.path.exists(os.path.join(OCRFOLDER, ocrfn)):
+				with open(os.path.join(OCRFOLDER, ocrfn), "rb") as txtfile:
+					txt = txtfile.read().decode("cp1252")
+					txt2 = ''.join([c if ord(c) < 128 else ' ' for c in txt])
+					meetings = txt2.split("\r\n\r\n")
+					print("Found {0} meetings for {1}, ({2})".format(len(meetings), row['newspaper'], row['date']))
+					for meeting in meetings:
+						place = get_place(meeting)
+						finalcsv.writerow(map(lambda x: x.encode("utf-8"), [meeting, "", place, row['newspaper'], row['date']]))
+			else:
+				print("No transcription file found for '{0}, ({1})'. Skipping.".format(row['newspaper'], row['date']))
+
